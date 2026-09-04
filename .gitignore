@@ -1,0 +1,50 @@
+.DS_Store
+*.log
+*.swp
+.idea/
+.vscode/
+
+# secrets / local env
+.env
+.env.*
+!.env.example
+docker.env
+**/.env
+**/docker.env
+
+# Hiddify Manager runtime data
+server/Hiddify-Manager/docker-data/
+**/docker-data/
+
+# Flutter / Dart
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/ephemeral/
+**/*.iml
+
+# Native / pods / caches
+**/Pods/
+**/DerivedData/
+**/*.dylib
+**/*.so
+**/*.a
+**/*.xcframework/
+**/node_modules/
+**/.venv*/
+**/__pycache__/
+
+# Core build artifacts
+client/hiddify-app/hiddify-core/bin/*
+!client/hiddify-app/hiddify-core/bin/.gitkeep
+client/hiddify-core/bin/*
+!client/hiddify-core/bin/.gitkeep
+
+# Large / generated
+**/*.db
+**/*.apk
+**/*.ipa
+**/*.dmg
+**/*.app/
