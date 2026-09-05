@@ -1,0 +1,4 @@
+"network": "grpc",
+"grpcSettings": {
+  "serviceName": "{{ ctx.proxy.path }}"
+}

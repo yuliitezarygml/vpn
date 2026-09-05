@@ -1,0 +1,6 @@
+"transport": {
+    "type": "grpc",
+    "service_name": "{{ ctx.proxy.path }}",
+    "idle_timeout": "15s",
+    "ping_timeout": "15s"
+},

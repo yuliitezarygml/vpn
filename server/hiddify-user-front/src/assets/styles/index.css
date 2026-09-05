@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --vh-offset: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.fa-font {
+  font-family: Vazirmatn, sans-serif;
+}
+
+#profile-qr-code {
+  display: block; /* Make sure canvas is a block element */
+  width: calc(100vh - 470px) !important; /* Set canvas width to 100% of its container */
+  height: calc(100vh - 470px) !important; /* Allow the height to adjust proportionally */
+
+  max-width: 214px;
+  max-height: 214px;
+  min-width: 50px;
+  min-height: 50px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgb(216, 216, 216);
+  border-radius: 40px;
+}
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+input::placeholder {
+  font-family: Vazirmatn, sans-serif
+}
+
+.rtl {
+  direction: rtl;
+}

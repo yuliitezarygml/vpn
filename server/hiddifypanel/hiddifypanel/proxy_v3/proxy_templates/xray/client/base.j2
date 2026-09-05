@@ -1,0 +1,61 @@
+{% block base_config %}
+{
+  "remarks": "{{ remarks }}",
+  "log": {
+    "access": "",
+    "error": "",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "tag": "socks",
+      "port": 10808,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls"]},
+      "settings": {"auth": "noauth", "udp": true}
+    },
+    {
+      "tag": "http",
+      "port": 10809,
+      "listen": "127.0.0.1",
+      "protocol": "http",
+      "sniffing": {"enabled": true, "destOverride": ["http", "tls"]},
+      "settings": {"auth": "noauth", "udp": true}
+    }
+  ],
+  "outbounds": [
+    {% include 'xray/client/subscription_status' %}
+    {% if ctx.user.is_active %}
+    {% block outbounds %}{% endblock %},
+    {% if ctx.hconfig.tls_fragment_enable %}
+    {
+      "tag": "fragment",
+      "protocol": "freedom",
+      "settings": {
+        "fragment": {
+          "packets": "{{ ctx.hconfig.tls_fragment_packets or 'tlshello' }}",
+          "length": "{{ ctx.hconfig.tls_fragment_length or '100-200' }}",
+          "interval": "{{ ctx.hconfig.tls_fragment_interval or '10-20' }}"
+        }
+      },
+      "streamSettings": {
+        "sockopt": {
+          "tcpKeepAliveIdle": 100,
+          "tcpNoDelay": true
+        }
+      }
+    },
+    {% endif %}
+    {% endif %}
+    {"tag": "direct", "protocol": "freedom", "settings": {}},
+    {"tag": "block", "protocol": "blackhole", "settings": {"response": {"type": "http"}}}
+  ],
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      {"type": "field", "outboundTag": "direct", "inboundTag": ["api"]}
+    ]
+  }
+}
+{% endblock %}

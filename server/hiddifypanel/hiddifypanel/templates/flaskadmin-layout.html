@@ -1,0 +1,415 @@
+{% extends 'admin-layout.html' %}
+
+
+{% block styles %}
+{{super()}}
+{% if admin_view.extra_css %}
+{% for css_url in admin_view.extra_css %}
+<link href="{{ css_url }}" rel="stylesheet">
+{% endfor %}
+<link rel="stylesheet" href="{{static_url_for(filename='plugins/bootstrap4-editable/css/bootstrap-editable.css')}}">
+<link rel="stylesheet" href="{{static_url_for(filename='plugins/select2/select2.css')}}">
+{% endif %}
+
+<style>
+    #domain,
+    #servernames {
+        direction: ltr
+    }
+
+    .column-header {
+        text-align: center;
+    }
+
+    .breadcrumb {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+
+{% block tail_js %}
+{{super()}}
+
+{% if admin_view.extra_js %}
+{% for js_url in admin_view.extra_js %}
+<script src1="{{ js_url }}" type="text/javascript"></script>
+{% endfor %}
+{% endif %}
+<link rel="stylesheet" href="https://unpkg.com/multiple-select@2.1.1/dist/multiple-select.min.css">
+<script src="https://unpkg.com/multiple-select@2.1.1/dist/multiple-select.min.js"></script>
+<link href="https://unpkg.com/multiple-select@2.1.1/dist/themes/bootstrap.min.css" rel="stylesheet">
+<script src="{{ static_url_for(filename='plugins/select2/select2.min.js') }}"></script>
+
+{%endblock%}
+{%block last%}
+<div class="modal fade" id="domainIpModal" tabindex="-1" aria-labelledby="domainIpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="domainIpModalLabel">Domain / IP Info</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="domainIpModalBody">
+                <!-- Content injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ static_url_for( filename='plugins/bootstrap4-editable/js/bootstrap-editable.min.js' ) }}"></script>
+<script>
+    const CDN_MODES = new Set(['cdn', 'auto_cdn_ip', 'worker']);
+    const PROXY_OPTIONS_URL = "{{ hurl_for('admin.Actions:domain_proxy_options') }}";
+    const PROXY_GROUP_LABELS = {
+        sni_gateway: `{{_("domain.custom_proxy.group.sni_gateway")}}`,
+        ip_based: `{{_("domain.custom_proxy.group.ip_based")}}`,
+        other: `{{_("domain.custom_proxy.group.other")}}`,
+    };
+    const PROXY_GROUP_ORDER = ['sni_gateway', 'ip_based', 'other'];
+
+    function isRealityFakeMode() {
+        return currentFakeMode() === 'reality';
+    }
+
+    function destroyCustomProxySelect2() {
+        const proxyEl = $('#custom_proxy');
+        if (!proxyEl.length) return;
+        if (proxyEl.data('select2')) {
+            proxyEl.select2('destroy');
+        }
+        proxyEl.removeClass('select2-hidden-accessible');
+        proxyEl.removeAttr('aria-hidden');
+        proxyEl.removeAttr('tabindex');
+        proxyEl.siblings('.select2-container').remove();
+    }
+
+    function initCustomProxySelect2() {
+        const proxyEl = $('#custom_proxy');
+        if (!proxyEl.length) return;
+        destroyCustomProxySelect2();
+        proxyEl.select2({
+            width: '100%',
+            placeholder: '—',
+            allowClear: !isRealityFakeMode(),
+        });
+    }
+
+    function optionValueExists(selectEl, value) {
+        if (!value) return false;
+        return Array.from(selectEl.querySelectorAll('option')).some((opt) => opt.value === value);
+    }
+
+    function rebuildCustomProxySelect(proxies, selected) {
+        const proxyEl = document.getElementById("custom_proxy");
+        if (!proxyEl) return;
+        const previous = selected || proxyEl.value || '';
+        destroyCustomProxySelect2();
+        proxyEl.innerHTML = '';
+
+        if (!isRealityFakeMode()) {
+            const empty = document.createElement('option');
+            empty.value = '';
+            empty.textContent = '—';
+            proxyEl.appendChild(empty);
+        }
+
+        const grouped = {};
+        (proxies || []).forEach((proxy) => {
+            const key = proxy.group || 'other';
+            grouped[key] = grouped[key] || [];
+            grouped[key].push(proxy);
+        });
+
+        PROXY_GROUP_ORDER.forEach((groupKey) => {
+            const items = grouped[groupKey];
+            if (!items || !items.length) return;
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = PROXY_GROUP_LABELS[groupKey] || groupKey;
+            items.forEach((proxy) => {
+                const option = document.createElement('option');
+                option.value = String(proxy.id);
+                option.textContent = proxy.name;
+                optgroup.appendChild(option);
+            });
+            proxyEl.appendChild(optgroup);
+        });
+
+        let nextValue = previous;
+        if (isRealityFakeMode() && proxies.length === 1) {
+            nextValue = String(proxies[0].id);
+        }
+        if (optionValueExists(proxyEl, nextValue)) {
+            proxyEl.value = nextValue;
+        } else if (!isRealityFakeMode()) {
+            proxyEl.value = '';
+        }
+        initCustomProxySelect2();
+    }
+
+    async function refreshProxyOptions() {
+        const proxyEl = document.getElementById("custom_proxy");
+        if (!proxyEl) return;
+        const $proxy = $('#custom_proxy');
+        const selected = ($proxy.data('select2') ? $proxy.val() : proxyEl.value) || '';
+        const mode = isSubLinkOnly() ? 'sub_link_only' : currentMode();
+        const fakeMode = currentFakeMode();
+        const url = `${PROXY_OPTIONS_URL}?mode=${encodeURIComponent(mode)}&fake_mode=${encodeURIComponent(fakeMode)}`;
+        try {
+            const response = await fetch(url, { credentials: 'same-origin' });
+            const payload = await response.json();
+            rebuildCustomProxySelect(payload.proxies || [], selected);
+        } catch (err) {
+            console.warn('proxy options refresh failed', err);
+        }
+    }
+
+    function currentMode() {
+        const modeEl = document.getElementById("mode");
+        return modeEl ? String(modeEl.value || '').trim() : '';
+    }
+
+    function currentFakeMode() {
+        const fakeModeEl = document.getElementById("fake_mode");
+        return fakeModeEl ? String(fakeModeEl.value || 'valid').trim() : 'valid';
+    }
+
+    function isSubLinkOnly() {
+        return $("#sub_link_only").is(':checked') || currentMode() === 'sub_link_only';
+    }
+
+    function syncFakeModeConstraints() {
+        const mode = currentMode();
+        const fakeModeEl = document.getElementById("fake_mode");
+        if (!fakeModeEl) return;
+
+        if (isSubLinkOnly() || CDN_MODES.has(mode)) {
+            fakeModeEl.value = 'valid';
+            fakeModeEl.disabled = true;
+        } else {
+            fakeModeEl.disabled = false;
+        }
+    }
+
+    function update_hiddify_ui() {
+        $("#show_domains").multipleSelect({ width: '100%', filter: true });
+        $("#download_domain").multipleSelect({ width: '100%', filter: true });
+
+        if ($("#domain").length > 0) {
+            var selectElement = document.getElementById("mode");
+            var groups = [
+                { label: `{{_("Direct")}}`, options: ["direct", "dnstt"] },
+                { label: `{{_("Panel Link")}}`, options: ["sub_link_only"] },
+                { label: `{{_("Bridge Servers")}}`, options: ["cdn", "worker", "relay"] },
+            ];
+
+            var options = Array.from($("#mode option"));
+            while (selectElement.firstChild) {
+                selectElement.removeChild(selectElement.firstChild);
+            }
+            for (var i = 0; i < groups.length; i++) {
+                var group = groups[i];
+                var optgroup = document.createElement("optgroup");
+                optgroup.label = group.label;
+                for (var j = 0; j < options.length; j++) {
+                    var option = options[j];
+                    if (group.options.includes(option.value)) {
+                        optgroup.appendChild(option.cloneNode(true));
+                    }
+                }
+                selectElement.appendChild(optgroup);
+            }
+        }
+        $('.form-group:not(:has(.custom-switch)) > input[type="checkbox"]').each(function () {
+            var parent = $(this).closest('.form-group');
+            var label = parent.find('label').hide().text();
+            $(this).wrap('<div class="custom-control custom-switch"></div>');
+            $(this).addClass('custom-control-input');
+            $(this).parent('.custom-control').append('<label class="custom-control-label" for="' + $(this).attr('id') + '">' + label + '</label>');
+        });
+        function hide_domain_elements() {
+            $("#extra_params").parent().hide();
+            syncFakeModeConstraints();
+
+            const fakeMode = currentFakeMode();
+            const mode = currentMode();
+            const hideShowDomains = mode === 'dnstt' || fakeMode === 'fake' || fakeMode === 'reality';
+            if (hideShowDomains) {
+                $("#show_domains").parent().hide();
+            } else {
+                $("#show_domains").parent().show();
+            }
+
+            if (mode == "sub_link_only" || isSubLinkOnly()) {
+                $("#cdn_ip").parent().hide();
+                $("#cdn_ip").val("");
+                $("#resolve_ip").parent().hide();
+                $("#servernames").parent().hide();
+                $("#domain").parent().find(".control-label").html(`{{_('domain.domain')}}`);
+                $("#domain").parent().find(".help-block").html(`{{_('domain.description')}}`);
+                $("#download_domain").parent().hide();
+            } else if (mode == "dnstt") {
+                $("#resolve_ip").parent().hide();
+                $("#servernames").parent().hide();
+                $("#download_domain").parent().hide();
+                $("#cdn_ip").parent().hide();
+                $("#extra_params").parent().show();
+            } else {
+                $("#download_domain").parent().show();
+                $("#cdn_ip").parent().show();
+                $("#resolve_ip").parent().show();
+
+                if (mode == 'direct') {
+                    $("#cdn_ip").parent().hide();
+                    $("#cdn_ip").val("");
+                } else {
+                    $("#cdn_ip").parent().show();
+                }
+                if (mode == 'direct' && fakeMode == 'valid') {
+                    $("#server_domain").parent().hide();
+                    $("#server_domain").val("");
+                } else {
+                    $("#server_domain").parent().show();
+                }
+                {% autoescape false %}
+                if (fakeMode === 'reality') {
+                    $("#servernames").parent().show();
+                    $("#servernames").parent().find(".control-label").html(`{{_('config.reality_server_names.label')}}`);
+                    $("#servernames").parent().find(".help-block").html(`{{_('config.reality_server_names.description')}}`);
+                    $("#domain").parent().find(".control-label").html(`{{_('config.reality_fallback_domain.label')}}`);
+                    $("#domain").parent().find(".help-block").html(`{{_('config.reality_fallback_domain.description')+("<a target='_blank' href='" +hurl_for('admin.Actions:get_some_random_reality_friendly_domain',test_domain=domain)+"'>"+_('Example Domains')+"</a>")}}`);
+                    $("#download_domain").parent().hide();
+                } else {
+                    if (mode == 'cdn' || mode == 'auto_cdn_ip') {
+                        $("#servernames").parent().show();
+                        $("#servernames").parent().find(".control-label").html(`{{_('domain.domain_fronting.label')}}`);
+                        $("#servernames").parent().find(".help-block").html(`{{_('domain.domain_fronting.description')}}`);
+                    } else {
+                        $("#servernames").parent().hide();
+                    }
+                    $("#domain").parent().find(".control-label").html(`{{_('domain.domain')}}`);
+                    $("#domain").parent().find(".help-block").html(`{{_('domain.description')}}`);
+                }
+                {% endautoescape %}
+            }
+            refreshProxyOptions();
+        }
+        $("#sub_link_only").off('change.domainProxy').on('change.domainProxy', hide_domain_elements);
+        $("#mode").off('change.domainProxy').on('change.domainProxy', hide_domain_elements);
+        $("#fake_mode").off('change.domainProxy').on('change.domainProxy', hide_domain_elements);
+        hide_domain_elements();
+        ConvertNumberToPersion(document.getElementById('fa_modal_window'));
+    }
+
+    update_hiddify_ui();
+
+    $('body').off('click.modal.data-api');
+    $('body').on('click.modal.data-api', '[data-toggle="modal"]', function () {
+        $($(this).data("target") + ' .modal-content').load($(this).attr('href'), function () {
+            setTimeout(update_hiddify_ui, 100);
+        });
+    });
+
+    $(document).ready(function () {
+        const $modal = new bootstrap.Modal(document.getElementById('domainIpModal'));
+        const $modalBody = $('#domainIpModalBody');
+
+        $(document).on('click', '.domain-ip-link', function (e) {
+            e.preventDefault();
+
+            const url = $(this).attr('href');
+            $("#domainIpModalLabel").text($(this).data().domain);
+            $modalBody.html(`
+      <div class="text-center py-4">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 mb-0">Loading...</p>
+      </div>
+    `);
+
+            $modal.show();
+
+            $.ajax({
+                url: url,
+                method: 'GET',
+                dataType: 'json' // change to 'html' or 'text' if your API returns something else
+            })
+                .done(function (response) {
+                    // Adjust this based on your actual response shape
+                    if (!Array.isArray(response) || response.length === 0) {
+                        $modalBody.html(`
+            <div class="alert alert-secondary mb-0" role="alert">
+              No IP data found.
+            </div>
+          `);
+                        return;
+                    }
+
+                    const rows = response.map(function (item) {
+                        const isServerIp = item.is_server_ip;
+                        const version = item.version;
+
+                        const alertClass = isServerIp ? 'alert-success' : 'alert-warning';
+                        const icon = isServerIp
+                            ? '<i class="bi bi-check-circle-fill me-2"></i>'
+                            : '<i class="bi bi-exclamation-triangle-fill me-2"></i>';
+                        const statusText = isServerIp ? 'is Server IP' : 'Not a server IP';
+
+                        const versionChip = version == 6
+                            ? '<span class="badge rounded-pill bg-info text-dark">v6</span>'
+                            : '<span class="badge rounded-pill bg-secondary">v4</span>';
+
+                        return `
+            <div class="alert ${alertClass} d-flex justify-content-between align-items-center mb-2" role="alert">
+              <div class="d-flex align-items-center">
+                ${icon}
+                <div>
+                  <strong>${item.ip}</strong>
+                  <div class="small">${statusText}</div>
+                </div>
+              </div>
+              ${versionChip}
+            </div>
+          `;
+                    }).join('');
+
+                    $modalBody.html(rows);
+                })
+                .fail(function (jqXHR, textStatus) {
+                    $modalBody.html(`
+          <div class="alert alert-danger mb-0" role="alert">
+            Failed to load data: ${textStatus}
+          </div>
+        `);
+                });
+        });
+    });
+</script>
+
+{% endblock %}
+
+{% block body %}
+{% set render_ctx = h.resolve_ctx() %}
+<!-- Bootstrap 5 Modal -->
+
+{% endblock %}
+
+{% block rtl_styles %}
+{{super()}}
+<style>
+    #cdn_ip {
+        direction: ltr;
+    }
+
+    #expiry_time,
+    #last_reset_time,
+    #current_usage_GB,
+    #usage_limit_GB,
+    #package_days,
+    #start_date {
+        direction: ltr;
+        text-align: right;
+    }
+</style>
+{% endblock %}

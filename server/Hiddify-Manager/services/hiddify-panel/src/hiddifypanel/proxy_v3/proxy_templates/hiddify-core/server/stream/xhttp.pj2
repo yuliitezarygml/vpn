@@ -1,0 +1,5 @@
+"transport": {
+  "type": "xhttp",
+  "path": "/{{ ctx.proxy.path }}",
+  "mode": "auto"
+},

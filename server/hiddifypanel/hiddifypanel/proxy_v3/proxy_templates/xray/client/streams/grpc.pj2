@@ -1,0 +1,6 @@
+"network": "grpc",
+"grpcSettings": {
+  "serviceName": "{{ proxy.path }}",
+  "idle_timeout": 115,
+  "health_check_timeout": 20
+},
