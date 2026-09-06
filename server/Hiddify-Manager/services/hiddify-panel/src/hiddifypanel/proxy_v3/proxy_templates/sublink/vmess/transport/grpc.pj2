@@ -1,3 +1,0 @@
-{% set data.net = 'grpc' %}
-{% set data.type = proxy.grpc_mode|default('gun') %}
-{% set data.path = proxy.path %}

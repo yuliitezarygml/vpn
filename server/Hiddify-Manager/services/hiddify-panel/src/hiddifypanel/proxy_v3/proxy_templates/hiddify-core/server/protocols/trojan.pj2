@@ -1,9 +1,0 @@
-"type": "trojan",
-"users": [
-  {% for user in ctx.users %}
-  {
-    "name": "{{ user.uuid }}", 
-    "password": "{{ user.uuid }}"
-  },
-  {% endfor %}
-]

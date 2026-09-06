@@ -1,8 +1,0 @@
-############## sni gateway HTTP decoy (for hidding) ##############
-{%- for p in ctx.proxies if p.mode == "domains_sni_gateway" %}
-# {{ p.slug }}
-{%- for pd in p.iter_proxies_with_domain() %}
-{{ pd.domain.sni |ljust(30)}} decoy_sp_{{ p.id }}_{{ pd.domain.name|slugify |ljust(30)}}
-{%- endfor %}
-{% endfor %}
-############## end of sni gateway ##############

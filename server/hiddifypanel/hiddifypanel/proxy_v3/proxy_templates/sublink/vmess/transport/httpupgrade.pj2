@@ -1,3 +1,0 @@
-{% set data.net = 'httpupgrade' %}
-{% set data.type = 'none' %}
-{% set data.path = '/' ~ proxy.path %}

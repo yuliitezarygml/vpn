@@ -1,1 +1,0 @@
-{{ ctx.proxy.tag }} {{ ctx.domain.alias }} {{POSTFIX}}

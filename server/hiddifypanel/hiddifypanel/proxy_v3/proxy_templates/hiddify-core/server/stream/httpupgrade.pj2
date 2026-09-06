@@ -1,4 +1,0 @@
-"transport": {
-    "type": "httpupgrade",
-    "path": "/{{ ctx.proxy.path }}"
-},

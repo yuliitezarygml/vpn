@@ -1,3 +1,0 @@
-{% with plugin="obfs-local", plugin_opts="obfs=tls;obfs-host=" ~ ctx.hconfig.ssfaketls_fakedomain %}
-{% include 'hiddify-core/client/protocols/ss' %}
-{% endwith %}

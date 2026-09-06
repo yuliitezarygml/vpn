@@ -1,3 +1,0 @@
-[submodule "services/hiddify-panel/src"]
-	path = services/hiddify-panel/src
-	url = https://github.com/hiddify/Hiddify-Panel.git

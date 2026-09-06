@@ -1,3 +1,0 @@
-{% set qp.type = 'ws' %}
-{% set qp.path = '/' ~ proxy.path %}
-{% set qp.host = ctx.proxy.domain.host %}

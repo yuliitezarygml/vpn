@@ -1,8 +1,0 @@
-"type": "socks",
-"users": [
-  {% for user in ctx.users %}
-  {
-    "username": "{{ user.uuid }}", 
-    "password": "h"},
-  {% endfor %}
-]

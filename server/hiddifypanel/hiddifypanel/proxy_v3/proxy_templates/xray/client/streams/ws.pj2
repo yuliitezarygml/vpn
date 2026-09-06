@@ -1,7 +1,0 @@
-"network": "ws",
-"wsSettings": {
-  "path": "/{{ proxy.path }}",
-  "headers": {
-    "Host": "{{ proxy.domain.host }}"
-  }
-},
