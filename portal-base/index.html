@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>VPN · Подписка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg0:#07120f; --bg1:#0d2420; --ink:#e8f2ee; --muted:#8aa399;
+  --accent:#c8f542; --accent-ink:#0a160f; --line:rgba(232,242,238,.12);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:"DM Sans",system-ui,sans-serif; color:var(--ink); min-height:100vh;
+  background:
+    radial-gradient(900px 500px at 10% -10%, #1a4a3a 0%, transparent 55%),
+    radial-gradient(700px 400px at 100% 0%, #243510 0%, transparent 50%),
+    linear-gradient(165deg, var(--bg0), var(--bg1) 55%, #050c0a);
+}
+.wrap { max-width:720px; margin:0 auto; padding:48px 24px 72px; }
+.brand { font-family:Syne,sans-serif; font-weight:800; font-size:clamp(2.4rem,8vw,3.6rem); letter-spacing:-.04em; line-height:.95; margin-bottom:12px; }
+.brand span { color:var(--accent); }
+.lead { color:var(--muted); font-size:1.05rem; max-width:38ch; margin-bottom:28px; }
+.status {
+  display:inline-flex; align-items:center; gap:8px;
+  margin-bottom:28px; padding:10px 14px; border-radius:999px;
+  border:1px solid var(--line); color:var(--muted); font-size:.9rem;
+}
+.status .dot {
+  width:8px; height:8px; border-radius:50%; background:var(--accent);
+  animation: pulse 1.2s ease infinite;
+}
+@keyframes pulse { 50% { opacity:.35; } }
+.actions { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:40px; }
+button,.btn { appearance:none; border:0; cursor:pointer; font:inherit; font-weight:700; border-radius:12px; padding:14px 20px; text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+.primary { background:var(--accent); color:var(--accent-ink); }
+.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
+.section h2 { font-family:Syne,sans-serif; font-size:1.15rem; margin-bottom:14px; }
+.apps { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:28px; }
+.apps a { border:1px solid var(--line); border-radius:12px; padding:14px; color:var(--ink); text-decoration:none; }
+.apps a:hover { border-color:var(--accent); background:rgba(200,245,66,.06); }
+.apps strong { display:block; }
+.apps small { color:var(--muted); font-size:.78rem; }
+.hint { color:var(--muted); font-size:.9rem; max-width:40ch; margin-bottom:16px; }
+.toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); background:var(--accent); color:var(--accent-ink); padding:10px 16px; border-radius:999px; font-weight:700; opacity:0; transition:.25s ease; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+code { display:block; margin-top:16px; padding:12px 14px; border-radius:10px; background:rgba(0,0,0,.35); border:1px solid var(--line); font-size:.78rem; word-break:break-all; color:var(--muted); }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1 class="brand">my<span>VPN</span></h1>
+  <p class="lead">Открой эту ссылку на телефоне — Happ подхватит подписку сам. Если не открылось, нажми кнопку ниже.</p>
+  <div class="status" id="status"><span class="dot"></span> Открываю приложение…</div>
+  <div class="actions">
+    <a class="btn primary" id="addBtn" href="#">+ Добавить подписку</a>
+    <button class="ghost" id="copyBtn" type="button">Скопировать ссылку</button>
+  </div>
+  <section class="section">
+    <h2>Нет приложения?</h2>
+    <div class="apps">
+      <a href="https://apps.apple.com/app/happ-proxy-utility/id6504287215" target="_blank" rel="noopener"><strong>Happ</strong><small>iOS / macOS</small></a>
+      <a href="https://play.google.com/store/apps/details?id=com.happproxy" target="_blank" rel="noopener"><strong>Happ</strong><small>Android</small></a>
+      <a href="https://github.com/hiddify/hiddify-next/releases" target="_blank" rel="noopener"><strong>Hiddify</strong><small>Win / Mac / Linux</small></a>
+      <a href="https://github.com/2dust/v2rayNG/releases" target="_blank" rel="noopener"><strong>v2rayNG</strong><small>Android</small></a>
+    </div>
+  </section>
+  <p class="hint">Каждый человек = своя ссылка. Эту никому больше не отправляй.</p>
+  <code id="subUrl"></code>
+</main>
+<div class="toast" id="toast">Ссылка скопирована</div>
+<script>
+const DEFAULT_SUB = "r89Yx7Ew4eVnKkGR";
+const path = location.pathname.replace(/\/+$/, "") || "/";
+const part = path.split("/").pop();
+const subId = (/^[A-Za-z0-9]{8,64}$/.test(part) && part !== "go" && part !== "add")
+  ? part
+  : DEFAULT_SUB;
+
+// HTTP без сертификата — Happ/INCY не ругаются на SSL
+const subUrl = "http://89.149.118.186:40946/" + subId;
+const enc = encodeURIComponent(subUrl);
+const deep = "happ://add/" + enc;
+
+document.getElementById("subUrl").textContent = subUrl;
+document.getElementById("addBtn").href = deep;
+
+function openApp() {
+  const iframe = document.createElement("iframe");
+  iframe.style.display = "none";
+  iframe.src = deep;
+  document.body.appendChild(iframe);
+  setTimeout(() => { window.location.href = deep; }, 80);
+  setTimeout(() => {
+    document.getElementById("status").innerHTML =
+      "Если приложение не открылось — нажми «+ Добавить подписку»";
+  }, 1600);
+}
+
+document.getElementById("copyBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText(subUrl); }
+  catch {
+    const t = document.createElement("textarea");
+    t.value = subUrl; document.body.appendChild(t); t.select();
+    document.execCommand("copy"); t.remove();
+  }
+  const toast = document.getElementById("toast");
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 1600);
+};
+
+openApp();
+</script>
+</body>
+</html>
